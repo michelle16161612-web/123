@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>直播專案甘特圖 V2</title>
+<style>
+body{font-family:Arial,"Microsoft JhengHei";background:#f4f6f9;margin:20px}
+h2{margin-top:0}
+button{padding:8px 12px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;margin-right:8px}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{border:1px solid #ddd;padding:6px}
+th{background:#eef4ff}
+input,select{width:100%;box-sizing:border-box;padding:4px}
+#gantt{margin-top:20px;overflow:auto;background:#fff;padding:10px;border:1px solid #ddd}
+.grid{display:grid;grid-template-columns:220px repeat(31,28px);min-width:1088px}
+.cell{border:1px solid #eee;height:28px;font-size:11px;display:flex;align-items:center;justify-content:center}
+.head{background:#eef4ff;font-weight:bold}
+.task{justify-content:flex-start;padding-left:8px}
+.bar{width:100%;height:16px;background:#22c55e;border-radius:8px}
+</style>
+</head>
+<body>
+<h2>直播專案甘特圖 V2（即時同步）</h2>
+<button onclick="addTask()">＋新增工作</button>
+<button onclick="save()">💾 儲存</button>
+<button onclick="loadData()">📂 載入</button>
+
+<table id="tbl">
+<thead>
+<tr><th>工作</th><th>負責人</th><th>開始</th><th>結束</th><th>狀態</th><th>進度%</th><th></th></tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<div id="gantt"></div>
+
+<script>
+const KEY="gantt-v2";
+
+function addTask(d={task:"",owner:"",start:1,end:3,status:"未開始",progress:0}){
+ const tr=document.createElement("tr");
+ tr.innerHTML=`
+ <td><input value="${d.task}" oninput="draw()"></td>
+ <td><input value="${d.owner}" oninput="draw()"></td>
+ <td><input type="number" min="1" max="31" value="${d.start}" oninput="draw()"></td>
+ <td><input type="number" min="1" max="31" value="${d.end}" oninput="draw()"></td>
+ <td>
+   <select oninput="draw()">
+     <option ${d.status=="未開始"?"selected":""}>未開始</option>
+     <option ${d.status=="進行中"?"selected":""}>進行中</option>
+     <option ${d.status=="完成"?"selected":""}>完成</option>
+   </select>
+ </td>
+ <td><input type="number" min="0" max="100" value="${d.progress}" oninput="draw()"></td>
+ <td><button onclick="this.closest('tr').remove();draw()">✖</button></td>`;
+ document.querySelector("#tbl tbody").appendChild(tr);
+ draw();
+}
+
+function draw(){
+ const g=document.getElementById("gantt");
+ let html='<div class="grid">';
+ html+='<div class="cell head task">工作</div>';
+ for(let i=1;i<=31;i++) html+=`<div class="cell head">${i}</div>`;
+ document.querySelectorAll("#tbl tbody tr").forEach(r=>{
+   const task=r.cells[0].querySelector("input").value||"(未命名)";
+   let s=parseInt(r.cells[2].querySelector("input").value)||1;
+   let e=parseInt(r.cells[3].querySelector("input").value)||1;
+   if(s>e){let t=s;s=e;e=t;}
+   html+=`<div class="cell task">${task}</div>`;
+   for(let d=1;d<=31;d++){
+      html+= d>=s && d<=e ? '<div class="cell"><div class="bar"></div></div>' : '<div class="cell"></div>';
+   }
+ });
+ html+='</div>';
+ g.innerHTML=html;
+ save(false);
+}
+
+function save(msg=true){
+ let arr=[];
+ document.querySelectorAll("#tbl tbody tr").forEach(r=>{
+   arr.push({
+    task:r.cells[0].querySelector("input").value,
+    owner:r.cells[1].querySelector("input").value,
+    start:r.cells[2].querySelector("input").value,
+    end:r.cells[3].querySelector("input").value,
+    status:r.cells[4].querySelector("select").value,
+    progress:r.cells[5].querySelector("input").value
+   });
+ });
+ localStorage.setItem(KEY,JSON.stringify(arr));
+ if(msg) alert("已儲存");
+}
+
+function loadData(){
+ const tb=document.querySelector("#tbl tbody");
+ tb.innerHTML="";
+ const arr=JSON.parse(localStorage.getItem(KEY)||"[]");
+ if(arr.length===0){addTask();}
+ else arr.forEach(addTask);
+ draw();
+}
+loadData();
+</script>
+</body>
+</html>
